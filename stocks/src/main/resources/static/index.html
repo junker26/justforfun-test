@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <link href="style.css" rel="stylesheet">
+    <script type="text/javascript" src="js/chart.js" ></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript"></script>
+
+    <title>Stocks</title>
+</head>
+<body>
+
+<div>
+<button id="myBtn">New</button>
+<table id="stocksList">
+</table>
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close">X</span>
+        </div>
+        <div class="modal-body">
+            <form id="form_create" action="#">
+                <input id="stock_date" placeholder="Date yyyy-mm-dd"><br>
+                <input id="stock_name" placeholder="Name"><br>
+                <input id="stock_cost" placeholder="Cost($)">
+                <button class="close" onclick="createStock()"><span class="close">Create</span></button>
+            </form>
+        </div>
+    </div>
+</div>
+    <div id="chart_div"></div>
+</div>
+
+<script>
+    var modal = document.getElementById('myModal');
+    var btn = document.getElementById("myBtn");
+    var span = document.getElementsByClassName("close")[0];
+
+    btn.onclick = function() {
+        modal.style.display = "block";
+    }
+
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+    let stocks;
+
+    function deleteStock(stockId) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("DELETE", "http://localhost:9000/stocks/delete/" + stockId, true);
+        xhttp.send();
+        setTimeout(loadStocks, 200);
+    }
+
+   function createStock(){
+           var stockDate = document.getElementById("stock_date").value;
+           var stockName = document.getElementById("stock_name").value;
+           var stockCost = document.getElementById("stock_cost").value;
+           var xmlhttp = new XMLHttpRequest();
+           xmlhttp.open("POST", "http://localhost:9000/stocks/save", true);
+           xmlhttp.setRequestHeader("Content-Type", "application/json");
+           xmlhttp.send(JSON.stringify({date: stockDate, name: stockName, cost: stockCost}));
+           span.onclick();
+           setTimeout(loadStocks, 200);
+    }
+    function updateStock(i){
+        var updateId = document.getElementById("update_id_" + i).value;
+        var updateDate = document.getElementById("update_date_" + i).value;
+        var updateName = document.getElementById("update_name_" + i).value;
+        var updateCost = document.getElementById("update_cost_" + i).value;
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.open("PUT", "http://localhost:9000/stocks/update", true);
+        xmlhttp.setRequestHeader("Content-Type", "application/json");
+        xmlhttp.send(JSON.stringify({id: updateId, date: updateDate, name: updateName, cost: updateCost}));
+        setTimeout(loadStocks, 200);
+    }
+
+    function loadStocks(){
+        let xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function (){
+            if(this.readyState == 4 && this.status == 200){
+                stocks = JSON.parse(this.responseText);
+                google.charts.load('current', {'packages':['bar']});
+                google.charts.setOnLoadCallback(drawChart);
+                stocks.sort(function (a, b){
+                    if(a.id > b.id){
+                        return 1;
+                    }
+                    if(a.id < b.id){
+                        return -1;
+                    }
+                    return 0;
+                });
+                let html = '<tr>\n' +
+                    '<th>Stock date</th>' +
+                    '<th>Stock name</th>' +
+                    '<th>Stock cost</th>' +
+                    '<th>Delete/Update</th>' +
+                    '</tr>';
+                for(let i = 0; i < stocks.length; i++){
+                    let stockUpd = stocks[i];
+                    '<form id="' + i + '" action="#" method="put"></form>'
+                    html = html + '<tr>\n' +
+                        '<td><input type="hidden" id="update_id_' + i +'" value="' +stockUpd.id + '">' +
+                        '<input maxlength="10" form="' + i + '" id="update_date_' + i +'" value="' +stockUpd.date.substr(0, 10) + '"></td>\n' +
+                        '<td><input form="' + i + '" id="update_name_' + i +'" value="' +stockUpd.name + '"></td>\n' +
+                        '<td><input form="' + i + '" id="update_cost_' + i +'" value="' +stockUpd.cost + '"></td>\n' +
+                        '<td><button form="' + i + '" onclick="updateStock('+ i +')">Update</button>' +
+                        '<button onclick="deleteStock('+ stockUpd.id +')">Delete</button></tr>'
+                }
+                document.getElementById("stocksList").innerHTML = html;
+            }
+        };
+        xhttp.open("GET", "http://localhost:9000/stocks/findAll", true);
+        xhttp.send();
+    }
+    loadStocks();
+</script>
+</body>
+</html>
